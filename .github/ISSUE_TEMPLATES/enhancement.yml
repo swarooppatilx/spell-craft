@@ -1,0 +1,52 @@
+name: "⚡ Enhancement"
+description: Suggest an improvement to an existing feature
+labels: [enhancement]
+title: "[ENHANCEMENT]:"
+
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: What area does this enhancement affect?
+      options:
+        - "AI Provider (Gemini/Ollama)"
+        - "Command execution"
+        - "Action handling"
+        - "Goal system"
+        - "Configuration"
+        - "Documentation"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behavior
+      description: Describe how the feature currently works.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed improvement
+      description: Describe the improvement you'd like to see.
+    validations:
+      required: true
+
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Why is this improvement valuable?
+      description: What benefits would this change provide?
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Any other information or examples that would help.
+    validations:
+      required: false
