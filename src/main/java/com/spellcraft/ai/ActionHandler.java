@@ -1,4 +1,4 @@
-package com.example.ai;
+package com.spellcraft.ai;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;

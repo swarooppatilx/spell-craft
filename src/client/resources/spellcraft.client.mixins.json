@@ -1,9 +1,9 @@
 {
 	"required": true,
-	"package": "com.example.mixin.client",
+	"package": "com.spellcraft.mixin.client",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
-		"ExampleClientMixin"
+		"SpellCraftClientMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

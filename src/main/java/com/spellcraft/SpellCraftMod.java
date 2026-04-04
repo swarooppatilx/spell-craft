@@ -1,13 +1,13 @@
-package com.example;
+package com.spellcraft;
 
-import com.example.ai.ApiClient;
-import com.example.ai.ActionHandler;
-import com.example.ai.Config;
-import com.example.ai.GeminiApiClient;
-import com.example.ai.GoalManager;
-import com.example.ai.LocationMemory;
-import com.example.ai.ReflexHandler;
-import com.example.ai.WorldState;
+import com.spellcraft.ai.ApiClient;
+import com.spellcraft.ai.ActionHandler;
+import com.spellcraft.ai.Config;
+import com.spellcraft.ai.GeminiApiClient;
+import com.spellcraft.ai.GoalManager;
+import com.spellcraft.ai.LocationMemory;
+import com.spellcraft.ai.ReflexHandler;
+import com.spellcraft.ai.WorldState;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -20,8 +20,8 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ExampleMod implements ModInitializer {
-    public static final String MOD_ID = "modid";
+public class SpellCraftMod implements ModInitializer {
+    public static final String MOD_ID = "spellcraft";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     private static final ConcurrentHashMap<ServerPlayer, PlayerContext> playerContexts = new ConcurrentHashMap<>();
@@ -52,7 +52,7 @@ public class ExampleMod implements ModInitializer {
         if (Config.getInstance().isValid()) {
             LOGGER.info("Using Gemini API");
         } else {
-            LOGGER.warn("No Gemini API key set. Edit config/modid.json to add your key.");
+            LOGGER.warn("No Gemini API key set. Edit config/spellcraft.json to add your key.");
         }
 
         ServerTickEvents.START_SERVER_TICK.register(server -> {
@@ -179,7 +179,7 @@ public class ExampleMod implements ModInitializer {
 
         if (!Config.getInstance().isValid()) {
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                "§cError: No Gemini API key. Edit config/modid.json"));
+                "§cError: No Gemini API key. Edit config/spellcraft.json"));
             return;
         }
 
