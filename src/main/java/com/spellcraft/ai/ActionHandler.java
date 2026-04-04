@@ -86,9 +86,25 @@ public class ActionHandler {
                 case "spawn" -> {
                     String entityId = normalizeId(params.get("entity_id").getAsString(), "entity");
                     int amount = params.has("amount") ? params.get("amount").getAsInt() : 1;
-                    String command = "execute at @p run summon " + entityId + " ~ ~ ~";
-                    var result = executor.execute(command, player);
-                    yield new ActionResult(result.output(), result.success());
+                    amount = Math.min(amount, 100);
+                    int spawned = 0;
+                    boolean anyFailed = false;
+                    for (int i = 0; i < amount; i++) {
+                        double offsetX = (i % 5) * 1.5 - 3.0;
+                        double offsetZ = (i / 5) * 1.5;
+                        String command = "execute at @p run summon " + entityId + " ~" + offsetX + " ~ ~" + offsetZ;
+                        var result = executor.execute(command, player);
+                        if (result.success()) {
+                            spawned++;
+                        } else {
+                            anyFailed = true;
+                        }
+                    }
+                    if (amount == 1) {
+                        yield new ActionResult("Spawned " + entityId, !anyFailed);
+                    } else {
+                        yield new ActionResult("Spawned " + spawned + "/" + amount + " " + entityId, !anyFailed);
+                    }
                 }
                 case "effect" -> {
                     String effectId = normalizeId(params.get("effect_id").getAsString(), "effect");
@@ -101,7 +117,55 @@ public class ActionHandler {
                 case "set_world" -> {
                     String property = params.get("property").getAsString();
                     String value = params.get("value").getAsString();
-                    String command = property + " set " + value;
+                    String command;
+                    switch (property) {
+                        case "time" -> {
+                            int ticks = switch (value.toLowerCase()) {
+                                case "day" -> 1000;
+                                case "night" -> 13000;
+                                case "noon" -> 6000;
+                                case "midnight" -> 18000;
+                                case "sunrise" -> 23000;
+                                case "sunset" -> 12000;
+                                default -> {
+                                    try {
+                                        yield Integer.parseInt(value);
+                                    } catch (NumberFormatException e) {
+                                        yield 1000;
+                                    }
+                                }
+                            };
+                            command = "time set " + ticks;
+                        }
+                        case "weather" -> command = "weather " + value;
+                        case "gamerule" -> {
+                            String ruleName = params.has("rule") ? params.get("rule").getAsString() : value;
+                            String ruleValue = params.has("rule_value") ? params.get("rule_value").getAsString() : "true";
+                            command = "gamerule " + ruleName + " " + ruleValue;
+                        }
+                        default -> command = property + " " + value;
+                    }
+                    var result = executor.execute(command, player);
+                    yield new ActionResult(result.output(), result.success());
+                }
+                case "setblock" -> {
+                    String block = params.get("block").getAsString();
+                    int x = params.has("x") ? params.get("x").getAsInt() : 0;
+                    int y = params.has("y") ? params.get("y").getAsInt() : 0;
+                    int z = params.has("z") ? params.get("z").getAsInt() : 3;
+                    String command = "setblock ~" + x + " ~" + y + " ~" + z + " " + block;
+                    var result = executor.execute(command, player);
+                    yield new ActionResult(result.output(), result.success());
+                }
+                case "fill" -> {
+                    String block = params.get("block").getAsString();
+                    int x1 = params.has("x1") ? params.get("x1").getAsInt() : -2;
+                    int y1 = params.has("y1") ? params.get("y1").getAsInt() : 0;
+                    int z1 = params.has("z1") ? params.get("z1").getAsInt() : 1;
+                    int x2 = params.has("x2") ? params.get("x2").getAsInt() : 2;
+                    int y2 = params.has("y2") ? params.get("y2").getAsInt() : 3;
+                    int z2 = params.has("z2") ? params.get("z2").getAsInt() : 5;
+                    String command = "fill ~" + x1 + " ~" + y1 + " ~" + z1 + " ~" + x2 + " ~" + y2 + " ~" + z2 + " " + block;
                     var result = executor.execute(command, player);
                     yield new ActionResult(result.output(), result.success());
                 }

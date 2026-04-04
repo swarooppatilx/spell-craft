@@ -6,6 +6,7 @@ import com.spellcraft.ai.Config;
 import com.spellcraft.ai.GeminiApiClient;
 import com.spellcraft.ai.GoalManager;
 import com.spellcraft.ai.LocationMemory;
+import com.spellcraft.ai.OllamaApiClient;
 import com.spellcraft.ai.ReflexHandler;
 import com.spellcraft.ai.WorldState;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -43,16 +44,29 @@ public class SpellCraftMod implements ModInitializer {
         return playerContexts.computeIfAbsent(player, PlayerContext::new);
     }
 
+    private static ApiClient createApiClient() {
+        Config config = Config.getInstance();
+        String provider = config.getApiProvider();
+        
+        if ("ollama".equalsIgnoreCase(provider)) {
+            return new OllamaApiClient(config.getOllamaApiUrl(), config.getOllamaModel());
+        }
+        return new GeminiApiClient(config.getGeminiApiKey());
+    }
+
     @Override
     public void onInitialize() {
         LOGGER.info("Hello Fabric world!");
 
         Config.load();
 
-        if (Config.getInstance().isValid()) {
-            LOGGER.info("Using Gemini API");
+        Config cfg = Config.getInstance();
+        String provider = cfg.getApiProvider();
+        
+        if (cfg.isValid()) {
+            LOGGER.info("Using {} API", provider);
         } else {
-            LOGGER.warn("No Gemini API key set. Edit config/spellcraft.json to add your key.");
+            LOGGER.warn("No API key set. Edit config/spellcraft.json to add your key.");
         }
 
         ServerTickEvents.START_SERVER_TICK.register(server -> {
@@ -121,7 +135,7 @@ public class SpellCraftMod implements ModInitializer {
         player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§7[Goal] Thinking..."));
 
         WorldState worldState = new WorldState(player);
-        ApiClient apiClient = new GeminiApiClient(Config.getInstance().getGeminiApiKey());
+        ApiClient apiClient = createApiClient();
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -179,7 +193,7 @@ public class SpellCraftMod implements ModInitializer {
 
         if (!Config.getInstance().isValid()) {
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                "§cError: No Gemini API key. Edit config/spellcraft.json"));
+                "§cError: No API key. Edit config/spellcraft.json"));
             return;
         }
 
@@ -191,7 +205,7 @@ public class SpellCraftMod implements ModInitializer {
         GoalManager goalManager = ctx.goalManager;
         LocationMemory locationMemory = ctx.locationMemory;
         ActionHandler actionHandler = new ActionHandler(player, goalManager, locationMemory);
-        ApiClient apiClient = new GeminiApiClient(Config.getInstance().getGeminiApiKey());
+        ApiClient apiClient = createApiClient();
 
         String goalPrompt = goalManager.getGoalPrompt();
         String locationPrompt = locationMemory.getLocationsPrompt();
@@ -209,7 +223,13 @@ public class SpellCraftMod implements ModInitializer {
                     player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                         "§cCould not understand: " + query));
                 } else {
-                    player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§aDone!"));
+                    boolean allSuccess = results.stream().allMatch(ActionHandler.ActionResult::success);
+                    if (allSuccess) {
+                        player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§aDone!"));
+                    } else {
+                        results.stream().filter(r -> !r.success()).findFirst().ifPresent(r ->
+                            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(r.message())));
+                    }
                 }
             } catch (Exception e) {
                 LOGGER.error("Error executing /ai command", e);

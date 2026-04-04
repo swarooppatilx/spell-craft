@@ -26,22 +26,23 @@ public class CommandExecutor {
         ServerLevel level = player.level();
         
         try {
-            net.minecraft.commands.CommandSourceStack source = player.createCommandSourceStack()
-                    .withSuppressedOutput()
-                    .withCallback((success, callback) -> {});
+            net.minecraft.commands.CommandSourceStack source = level.getServer().createCommandSourceStack()
+                    .withPosition(player.position())
+                    .withLevel(level)
+                    .withEntity(player);
             
             var dispatcher = level.getServer().getCommands().getDispatcher();
             var parsed = dispatcher.parse(command, source);
             
             if (parsed.getContext().getNodes().isEmpty()) {
-                return new CommandResult(command, false, "Unknown command", needsCheats);
+                return new CommandResult(command, false, "Unknown command: " + command, needsCheats);
             }
             
-            boolean success = dispatcher.execute(parsed) > 0;
+            int result = dispatcher.execute(parsed);
             
-            String output = success ? "Command executed" : "Command failed or no effect";
-            
-            return new CommandResult(command, success, output, needsCheats);
+            return new CommandResult(command, true, "Executed: " + command, needsCheats);
+        } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+            return new CommandResult(command, false, e.getRawMessage().getString(), needsCheats);
         } catch (Exception e) {
             String errorMsg = e.getMessage();
             if (errorMsg == null) {
