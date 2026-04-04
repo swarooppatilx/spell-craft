@@ -2,18 +2,35 @@
 
 SpellCraft mod is a minecraft mod that aims to provide an environment for autonomous/semi-autonomous agents that can understand natural language to perform tasks in the game. This can be used to run series of experiments and study how agents behave in open environments.
 ![collage](screenshots/collage.png)
+## What does it do?
+At its core, the mod bridges natural human language with Minecraft's underlying command system, but it also features "Agentic" capabilities, meaning it can think, remember, and act on your behalf.
 
-## Features
+Here are its primary capabilities:
 
-- **Natural Language Parsing** - Use plain English for any Minecraft operation
-- **Local AI Support** - Works offline with Ollama (default)
-- **Cloud Fallback** - Use Gemini API when Ollama is unavailable
-- **Universal Command Support** - Spawn, give, teleport, weather, time, etc.
-- **Auto-detect Cheat Requirements** - Warns if command needs cheats/op
-- **Retry Logic** - Automatic retry on network timeouts
+### 1. Natural Language Command Execution (/ai)
+You can type something like /ai give me a diamond sword or /ai spawn 5 angry wolves.
+Behind the scenes, the mod:
+1. Gathers your current *World State* (your health, inventory, nearby entities, coordinates, the block you are looking at, time of day).
+2. Sends this data alongside your prompt to an AI (either a local *Ollama* model or Google's *Gemini API*).
+3. The AI replies with a structured JSON "plan" (e.g., {"action": "give", "params": {"item_id": "minecraft:diamond_sword"}}).
+4. The ActionHandler and CommandExecutor safely run the actual Minecraft commands.
 
+### 2. Long-term Planning & Auto-Execution (/ai-goal)
+The mod features a GoalManager. You can give the AI a complex, multi-step goal.
+* It breaks the goal down into actionable steps.
+* It monitors your progress. If you get stuck (detected by a lack of movement for 10 seconds), the AI automatically re-evaluates the situation and suggests a different approach.
+* It auto-triggers AI thinking loops in the background to help you complete your current task.
+
+### 3. Spatial Memory (/ai-memory)
+The LocationMemory system allows the AI to "remember" coordinates. You can tell the AI to "save this location as home" or "remember where this diamond vein is." Later, you can simply ask the AI to "teleport me home," and it will fetch the saved coordinates from its memory to execute the teleportation.
+
+### 4. Automated Survival Reflexes
+The ReflexHandler acts as a guardian angel running on every server tick. It bypasses the AI for immediate survival actions:
+* *On Fire:* It instantly places water at your feet and gives you Fire Resistance.
+* *Drowning:* It grants Water Breathing if your air supply gets too low.
+* *Falling:* It applies Slow Falling and Resistance if you drop more than 10 blocks.
+* *Low Health:* It triggers instant healing and regeneration if you drop below 5 health.## Setup
 ## Setup
-
 ### Option 1: Ollama (Recommended - Works Offline)
 
 1. Install Ollama from [ollama.ai](https://ollama.ai)
