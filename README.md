@@ -36,7 +36,7 @@ The ReflexHandler acts as a guardian angel running on every server tick. It bypa
 1. Install Ollama from [ollama.ai](https://ollama.ai)
 2. Pull the model:
    ```bash
-   ollama pull deepseek-r1:1.5b #You can use any other model
+   ollama pull minimax-m2.5:cloud #You can use any other model
    ```
 3. Start Ollama (runs on `localhost:11434`)
 
@@ -44,48 +44,46 @@ The ReflexHandler acts as a guardian angel running on every server tick. It bypa
 
 1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
 2. Create a new API key
-3. Set `gemini_api_key` in config
+3. Set `api_provider` to `"gemini"` and add your key to `gemini_api_key` in config
 
 ### Configure the Mod
 
 The config file is created automatically on first run at:
 
 ```
-.minecraft/config/modid.json
+.minecraft/config/spellcraft.json
 ```
 
-Default config (uses Ollama):
+Default config (uses Gemini):
 
 ```json
 {
-	"gemini_api_key": "",
-	"ollama": {
-		"endpoint": "http://localhost:11434",
-		"model": "deepseek-r1:1.5b"
-	}
-}
-```
-
-To use Gemini instead:
-
-```json
-{
+	"api_provider": "gemini",
 	"gemini_api_key": "YOUR_API_KEY_HERE",
-	"ollama": {
-		"endpoint": "http://localhost:11434",
-		"model": "deepseek-r1:1.5b"
-	}
+	"ollama_api_url": "http://localhost:11434",
+	"ollama_model": "minimax-m2.5:cloud"
 }
 ```
 
-**Auto-detection:** If `gemini_api_key` is empty, uses Ollama. If set, uses Gemini.
+To use Ollama instead:
+
+```json
+{
+	"api_provider": "ollama",
+	"gemini_api_key": "",
+	"ollama_api_url": "http://localhost:11434",
+	"ollama_model": "minimax-m2.5:cloud"
+}
+```
+
+**Provider selection:** Set `api_provider` to `"ollama"` or `"gemini"`.
 
 ### Add to Prism Launcher
 
 1. Open Prism Launcher
 2. Create/edit your 26.1.1 instance
 3. Go to **Loader Mods** tab
-4. Add `modid-1.0.0.jar`
+4. Add `spellcraft-1.0.0.jar`
 5. Add `fabric-api-0.145.3+26.1.1.jar` (download from [fabricmc.net](https://fabricmc.net/use/server/))
 6. Launch the game
 
@@ -118,8 +116,8 @@ To use Gemini instead:
 
 **Provider Selection:**
 
-- If `gemini_api_key` is empty → uses Ollama (local)
-- If `gemini_api_key` is set → uses Gemini (cloud)
+- `api_provider: "ollama"` → uses Ollama (local)
+- `api_provider: "gemini"` → uses Gemini (cloud, requires valid `gemini_api_key`)
 
 ## Requirements
 
@@ -136,14 +134,15 @@ export JAVA_HOME=/usr/lib/jvm/java-25-openjdk
 ./gradlew build
 ```
 
-Jar output: `build/libs/modid-1.0.0.jar`
+Jar output: `build/libs/spellcraft-1.0.0.jar`
 
 ## Configuration
 
-Config file location: `.minecraft/config/modid.json`
+Config file location: `.minecraft/config/spellcraft.json`
 
-| Setting           | Description       | Default                |
-| ----------------- | ----------------- | ---------------------- |
-| `gemini_api_key`  | Google AI API key | (empty)                |
-| `ollama.endpoint` | Ollama server URL | http://localhost:11434 |
-| `ollama.model`    | Ollama model name | deepseek-r1:1.5b       |
+| Setting          | Description              | Default                |
+| ---------------- | ------------------------ | ---------------------- |
+| `api_provider`   | AI provider to use       | `gemini`               |
+| `gemini_api_key` | Google AI API key        | (empty)                |
+| `ollama_api_url` | Ollama server URL        | http://localhost:11434 |
+| `ollama_model`   | Ollama model name        | `llama3`               |
