@@ -1,4 +1,4 @@
-package com.example.ai;
+package com.spellcraft.ai;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -13,8 +13,9 @@ import java.nio.file.Path;
 public class Config {
     private static final Logger LOGGER = LoggerFactory.getLogger("Config");
     private static Config instance;
+    private String apiProvider;
     private String geminiApiKey;
-    private String ollamaEndpoint;
+    private String ollamaApiUrl;
     private String ollamaModel;
 
     private Config() {}
@@ -25,19 +26,21 @@ public class Config {
 
     public static void load() {
         try {
-            Path configPath = FabricLoader.getInstance().getConfigDir().resolve("modid.json");
+            Path configPath = FabricLoader.getInstance().getConfigDir().resolve("spellcraft.json");
             Gson gson = new Gson();
             
             if (!Files.exists(configPath)) {
                 LOGGER.warn("Config file not found at " + configPath + ", creating default config...");
-            instance = new Config();
-            instance.geminiApiKey = "";
-            instance.ollamaEndpoint = "";
-            instance.ollamaModel = "";
-            String defaultConfig = """
+                instance = new Config();
+                instance.apiProvider = "ollama";
+                instance.geminiApiKey = "";
+                instance.ollamaApiUrl = "http://localhost:11434";
+                instance.ollamaModel = "llama3";
+                String defaultConfig = """
                     {
-                      "gemini_api_key": "YOUR_API_KEY_HERE",
-                      "ollama_endpoint": "http://localhost:11434",
+                      "api_provider": "ollama",
+                      "gemini_api_key": "",
+                      "ollama_api_url": "http://localhost:11434",
                       "ollama_model": "llama3"
                     }
                     """;
@@ -48,47 +51,47 @@ public class Config {
             Reader reader = Files.newBufferedReader(configPath);
             JsonObject json = gson.fromJson(reader, JsonObject.class);
             instance = new Config();
+            instance.apiProvider = json.has("api_provider") ? json.get("api_provider").getAsString() : "ollama";
             instance.geminiApiKey = json.has("gemini_api_key") ? json.get("gemini_api_key").getAsString() : "";
-            instance.ollamaEndpoint = json.has("ollama_endpoint") ? json.get("ollama_endpoint").getAsString() : "http://localhost:11434";
+            instance.ollamaApiUrl = json.has("ollama_api_url") ? json.get("ollama_api_url").getAsString() : "http://localhost:11434";
             instance.ollamaModel = json.has("ollama_model") ? json.get("ollama_model").getAsString() : "llama3";
             
             reader.close();
-            LOGGER.info("Config loaded from " + configPath);
+            LOGGER.info("Config loaded from {} - using {} provider", configPath, instance.apiProvider);
         } catch (Exception e) {
             LOGGER.error("Error loading config", e);
             instance = new Config();
+            instance.apiProvider = "ollama";
             instance.geminiApiKey = "";
-            instance.ollamaEndpoint = "http://localhost:11434";
+            instance.ollamaApiUrl = "http://localhost:11434";
             instance.ollamaModel = "llama3";
         }
+    }
+
+    public String getApiProvider() {
+        return apiProvider;
     }
 
     public String getGeminiApiKey() {
         return geminiApiKey;
     }
 
-    public String getOllamaEndpoint() {
-        return ollamaEndpoint;
+    public String getOllamaApiUrl() {
+        return ollamaApiUrl;
     }
 
     public String getOllamaModel() {
         return ollamaModel;
     }
 
-    public boolean isGeminiConfigured() {
+    public boolean isValid() {
+        if ("ollama".equalsIgnoreCase(apiProvider)) {
+            return ollamaApiUrl != null && !ollamaApiUrl.isEmpty();
+        }
         return geminiApiKey != null && !geminiApiKey.isEmpty() && !geminiApiKey.equals("YOUR_API_KEY_HERE");
     }
 
-    public boolean isOllamaConfigured() {
-        return ollamaEndpoint != null && !ollamaEndpoint.isEmpty() &&
-               ollamaModel != null && !ollamaModel.isEmpty();
-    }
-
-    public boolean isValid() {
-        return isGeminiConfigured() || isOllamaConfigured();
-    }
-
     public boolean useOllama() {
-        return isOllamaConfigured() && !isGeminiConfigured();
+        return "ollama".equalsIgnoreCase(apiProvider);
     }
 }

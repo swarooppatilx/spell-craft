@@ -1,8 +1,8 @@
 {
 	"schemaVersion": 1,
-	"id": "modid",
+	"id": "spellcraft",
 	"version": "${version}",
-	"name": "Example mod",
+	"name": "Spell Craft",
 	"description": "This is an example description! Tell everyone what your mod is about!",
 	"authors": [
 		"Me!"
@@ -16,16 +16,16 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"com.example.ExampleMod"
+			"com.spellcraft.SpellCraftMod"
 		],
 		"client": [
-			"com.example.ExampleModClient"
+			"com.spellcraft.SpellCraftModClient"
 		]
 	},
 	"mixins": [
-		"modid.mixins.json",
+		"spellcraft.mixins.json",
 		{
-			"config": "modid.client.mixins.json",
+			"config": "spellcraft.client.mixins.json",
 			"environment": "client"
 		}
 	],

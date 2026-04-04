@@ -1,4 +1,4 @@
-package com.example.ai;
+package com.spellcraft.ai;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -9,19 +9,18 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
-public class OllamaApiClient implements ApiClient {
+public class GeminiApiClient implements ApiClient {
+    private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
     private static final int MAX_RETRIES = 2;
-    private static final int INITIAL_TIMEOUT_SECONDS = 60;
+    private static final int INITIAL_TIMEOUT_SECONDS = 30;
     private static final int CONNECT_TIMEOUT_SECONDS = 15;
     
     private final HttpClient httpClient;
-    private final String endpoint;
-    private final String model;
+    private final String apiKey;
     private final Gson gson;
 
-    public OllamaApiClient(String endpoint, String model) {
-        this.endpoint = endpoint;
-        this.model = model;
+    public GeminiApiClient(String apiKey) {
+        this.apiKey = apiKey;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(CONNECT_TIMEOUT_SECONDS))
                 .build();
@@ -34,18 +33,19 @@ public class OllamaApiClient implements ApiClient {
         String prompt = template + userInput + "\n\nOutput:";
 
         JsonObject requestBody = new JsonObject();
-        requestBody.addProperty("model", model);
+        JsonArray contents = new JsonArray();
         
-        JsonArray messages = new JsonArray();
-        JsonObject message = new JsonObject();
-        message.addProperty("role", "user");
-        message.addProperty("content", prompt);
-        messages.add(message);
+        JsonObject content = new JsonObject();
+        JsonArray parts = new JsonArray();
+        JsonObject part = new JsonObject();
+        part.addProperty("text", prompt);
+        parts.add(part);
+        content.add("parts", parts);
+        contents.add(content);
         
-        requestBody.add("messages", messages);
-        requestBody.addProperty("stream", false);
-
-        String url = endpoint + "/api/chat";
+        requestBody.add("contents", contents);
+        
+        String url = API_URL + "?key=" + apiKey;
         String requestJson = gson.toJson(requestBody);
         
         Exception lastException = null;
@@ -64,17 +64,25 @@ public class OllamaApiClient implements ApiClient {
                 HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
                 
                 if (response.statusCode() != 200) {
-                    throw new Exception("Ollama API error: " + response.statusCode() + " - " + response.body());
+                    throw new Exception("API error: " + response.statusCode() + " - " + response.body());
                 }
 
                 JsonObject responseJson = gson.fromJson(response.body(), JsonObject.class);
-                JsonObject messageResponse = responseJson.getAsJsonObject("message");
+                JsonArray candidates = responseJson.getAsJsonArray("candidates");
                 
-                if (messageResponse == null) {
-                    throw new Exception("No response from Ollama API");
+                if (candidates == null || candidates.isEmpty()) {
+                    throw new Exception("No response from API");
                 }
 
-                return messageResponse.get("content").getAsString();
+                JsonObject firstCandidate = candidates.get(0).getAsJsonObject();
+                JsonObject contentResponse = firstCandidate.getAsJsonObject("content");
+                JsonArray partsResponse = contentResponse.getAsJsonArray("parts");
+                
+                if (partsResponse == null || partsResponse.isEmpty()) {
+                    throw new Exception("No text in response");
+                }
+
+                return partsResponse.get(0).getAsJsonObject().get("text").getAsString();
                 
             } catch (Exception e) {
                 lastException = e;

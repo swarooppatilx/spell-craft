@@ -1,4 +1,4 @@
-package com.example.ai;
+package com.spellcraft.ai;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
