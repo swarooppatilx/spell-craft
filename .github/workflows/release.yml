@@ -14,6 +14,10 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: verify tag is on main
+        run: git merge-base --is-ancestor HEAD origin/main
       - name: validate gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
       - name: setup jdk
@@ -25,8 +29,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: build
-        run: ./gradlew build
+      - name: assemble
+        run: ./gradlew assemble
       - name: create release
         uses: softprops/action-gh-release@v2
         with:
