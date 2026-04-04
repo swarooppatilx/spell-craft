@@ -6,6 +6,7 @@ import com.example.ai.Config;
 import com.example.ai.GeminiApiClient;
 import com.example.ai.GoalManager;
 import com.example.ai.LocationMemory;
+import com.example.ai.OllamaApiClient;
 import com.example.ai.ReflexHandler;
 import com.example.ai.WorldState;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -43,16 +44,28 @@ public class ExampleMod implements ModInitializer {
         return playerContexts.computeIfAbsent(player, PlayerContext::new);
     }
 
+    private static ApiClient createApiClient() {
+        Config config = Config.getInstance();
+        if (config.useOllama()) {
+            return new OllamaApiClient(config.getOllamaEndpoint(), config.getOllamaModel());
+        }
+        return new GeminiApiClient(config.getGeminiApiKey());
+    }
+
     @Override
     public void onInitialize() {
         LOGGER.info("Hello Fabric world!");
 
         Config.load();
 
-        if (Config.getInstance().isValid()) {
+        if (Config.getInstance().useOllama()) {
+            LOGGER.info("Using Ollama API - endpoint: {}, model: {}", 
+                Config.getInstance().getOllamaEndpoint(), 
+                Config.getInstance().getOllamaModel());
+        } else if (Config.getInstance().isGeminiConfigured()) {
             LOGGER.info("Using Gemini API");
         } else {
-            LOGGER.warn("No Gemini API key set. Edit config/modid.json to add your key.");
+            LOGGER.warn("No AI provider configured. Edit config/modid.json to add Gemini API key or Ollama settings.");
         }
 
         ServerTickEvents.START_SERVER_TICK.register(server -> {
@@ -121,7 +134,7 @@ public class ExampleMod implements ModInitializer {
         player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§7[Goal] Thinking..."));
 
         WorldState worldState = new WorldState(player);
-        ApiClient apiClient = new GeminiApiClient(Config.getInstance().getGeminiApiKey());
+        ApiClient apiClient = createApiClient();
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -179,7 +192,7 @@ public class ExampleMod implements ModInitializer {
 
         if (!Config.getInstance().isValid()) {
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                "§cError: No Gemini API key. Edit config/modid.json"));
+                "§cError: No AI provider configured. Edit config/modid.json"));
             return;
         }
 
@@ -191,7 +204,7 @@ public class ExampleMod implements ModInitializer {
         GoalManager goalManager = ctx.goalManager;
         LocationMemory locationMemory = ctx.locationMemory;
         ActionHandler actionHandler = new ActionHandler(player, goalManager, locationMemory);
-        ApiClient apiClient = new GeminiApiClient(Config.getInstance().getGeminiApiKey());
+        ApiClient apiClient = createApiClient();
 
         String goalPrompt = goalManager.getGoalPrompt();
         String locationPrompt = locationMemory.getLocationsPrompt();
