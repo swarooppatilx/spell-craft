@@ -46,8 +46,9 @@ public class SpellCraftMod implements ModInitializer {
 
     private static ApiClient createApiClient() {
         Config config = Config.getInstance();
-        if (config.useOllama()) {
-            LOGGER.info("Using Ollama API at {}", config.getOllamaApiUrl());
+        String provider = config.getApiProvider();
+        
+        if ("ollama".equalsIgnoreCase(provider)) {
             return new OllamaApiClient(config.getOllamaApiUrl(), config.getOllamaModel());
         }
         return new GeminiApiClient(config.getGeminiApiKey());
@@ -60,10 +61,10 @@ public class SpellCraftMod implements ModInitializer {
         Config.load();
 
         Config cfg = Config.getInstance();
-        if (cfg.useOllama()) {
-            LOGGER.info("Using Ollama API");
-        } else if (cfg.isValid()) {
-            LOGGER.info("Using Gemini API");
+        String provider = cfg.getApiProvider();
+        
+        if (cfg.isValid()) {
+            LOGGER.info("Using {} API", provider);
         } else {
             LOGGER.warn("No API key set. Edit config/spellcraft.json to add your key.");
         }
@@ -192,7 +193,7 @@ public class SpellCraftMod implements ModInitializer {
 
         if (!Config.getInstance().isValid()) {
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                "§cError: No API key configured. Edit config/spellcraft.json to add Gemini API key or configure Ollama."));
+                "§cError: No API key. Edit config/spellcraft.json"));
             return;
         }
 
@@ -222,7 +223,13 @@ public class SpellCraftMod implements ModInitializer {
                     player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                         "§cCould not understand: " + query));
                 } else {
-                    player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§aDone!"));
+                    boolean allSuccess = results.stream().allMatch(ActionHandler.ActionResult::success);
+                    if (allSuccess) {
+                        player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§aDone!"));
+                    } else {
+                        results.stream().filter(r -> !r.success()).findFirst().ifPresent(r ->
+                            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(r.message())));
+                    }
                 }
             } catch (Exception e) {
                 LOGGER.error("Error executing /ai command", e);

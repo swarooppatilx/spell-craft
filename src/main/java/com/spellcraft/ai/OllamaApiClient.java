@@ -1,6 +1,7 @@
 package com.spellcraft.ai;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.net.URI;
 import java.net.http.HttpClient;
