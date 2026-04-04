@@ -6,6 +6,7 @@ import com.spellcraft.ai.Config;
 import com.spellcraft.ai.GeminiApiClient;
 import com.spellcraft.ai.GoalManager;
 import com.spellcraft.ai.LocationMemory;
+import com.spellcraft.ai.OllamaApiClient;
 import com.spellcraft.ai.ReflexHandler;
 import com.spellcraft.ai.WorldState;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -43,16 +44,28 @@ public class SpellCraftMod implements ModInitializer {
         return playerContexts.computeIfAbsent(player, PlayerContext::new);
     }
 
+    private static ApiClient createApiClient() {
+        Config config = Config.getInstance();
+        if (config.isValid()) {
+            return new GeminiApiClient(config.getGeminiApiKey());
+        }
+        LOGGER.info("No Gemini API key, falling back to Ollama");
+        return new OllamaApiClient(config.getOllamaApiUrl(), config.getOllamaModel());
+    }
+
     @Override
     public void onInitialize() {
         LOGGER.info("Hello Fabric world!");
 
         Config.load();
 
-        if (Config.getInstance().isValid()) {
+        Config cfg = Config.getInstance();
+        if (cfg.isValid()) {
             LOGGER.info("Using Gemini API");
+        } else if (cfg.isOllamaConfigured()) {
+            LOGGER.info("No Gemini API key, using Ollama API");
         } else {
-            LOGGER.warn("No Gemini API key set. Edit config/spellcraft.json to add your key.");
+            LOGGER.warn("No API key set. Edit config/spellcraft.json to add your key.");
         }
 
         ServerTickEvents.START_SERVER_TICK.register(server -> {
@@ -121,7 +134,7 @@ public class SpellCraftMod implements ModInitializer {
         player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§7[Goal] Thinking..."));
 
         WorldState worldState = new WorldState(player);
-        ApiClient apiClient = new GeminiApiClient(Config.getInstance().getGeminiApiKey());
+        ApiClient apiClient = createApiClient();
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -177,9 +190,9 @@ public class SpellCraftMod implements ModInitializer {
             return;
         }
 
-        if (!Config.getInstance().isValid()) {
+        if (!Config.getInstance().isValid() && !Config.getInstance().isOllamaConfigured()) {
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                "§cError: No Gemini API key. Edit config/spellcraft.json"));
+                "§cError: No API key configured. Edit config/spellcraft.json to add Gemini API key or configure Ollama."));
             return;
         }
 
@@ -191,7 +204,7 @@ public class SpellCraftMod implements ModInitializer {
         GoalManager goalManager = ctx.goalManager;
         LocationMemory locationMemory = ctx.locationMemory;
         ActionHandler actionHandler = new ActionHandler(player, goalManager, locationMemory);
-        ApiClient apiClient = new GeminiApiClient(Config.getInstance().getGeminiApiKey());
+        ApiClient apiClient = createApiClient();
 
         String goalPrompt = goalManager.getGoalPrompt();
         String locationPrompt = locationMemory.getLocationsPrompt();
