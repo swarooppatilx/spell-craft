@@ -1,6 +1,7 @@
-# AI Command Mod
+# SpellCraft Mod
 
-Natural language commands for Minecraft using AI (Ollama or Gemini).
+SpellCraft mod is a minecraft mod that aims to provide an environment for autonomous/semi-autonomous agents that can understand natural language to perform tasks in the game. This can be used to run series of experiments and study how agents behave in open environments.
+![collage](screenshots/collage.png)
 
 ## Features
 
@@ -11,14 +12,6 @@ Natural language commands for Minecraft using AI (Ollama or Gemini).
 - **Auto-detect Cheat Requirements** - Warns if command needs cheats/op
 - **Retry Logic** - Automatic retry on network timeouts
 
-## Requirements
-
-- Minecraft 26.1.1
-- Fabric Loader 0.18.6+
-- Fabric API 0.145.3+
-- Java 25 (to build from source)
-- **Ollama** (optional, for local AI)
-
 ## Setup
 
 ### Option 1: Ollama (Recommended - Works Offline)
@@ -26,7 +19,7 @@ Natural language commands for Minecraft using AI (Ollama or Gemini).
 1. Install Ollama from [ollama.ai](https://ollama.ai)
 2. Pull the model:
    ```bash
-   ollama pull deepseek-r1:1.5b
+   ollama pull deepseek-r1:1.5b #You can use any other model
    ```
 3. Start Ollama (runs on `localhost:11434`)
 
@@ -39,29 +32,32 @@ Natural language commands for Minecraft using AI (Ollama or Gemini).
 ### Configure the Mod
 
 The config file is created automatically on first run at:
+
 ```
 .minecraft/config/modid.json
 ```
 
 Default config (uses Ollama):
+
 ```json
 {
-  "gemini_api_key": "",
-  "ollama": {
-    "endpoint": "http://localhost:11434",
-    "model": "deepseek-r1:1.5b"
-  }
+	"gemini_api_key": "",
+	"ollama": {
+		"endpoint": "http://localhost:11434",
+		"model": "deepseek-r1:1.5b"
+	}
 }
 ```
 
 To use Gemini instead:
+
 ```json
 {
-  "gemini_api_key": "YOUR_API_KEY_HERE",
-  "ollama": {
-    "endpoint": "http://localhost:11434",
-    "model": "deepseek-r1:1.5b"
-  }
+	"gemini_api_key": "YOUR_API_KEY_HERE",
+	"ollama": {
+		"endpoint": "http://localhost:11434",
+		"model": "deepseek-r1:1.5b"
+	}
 }
 ```
 
@@ -104,22 +100,17 @@ To use Gemini instead:
 4. Result is shown in chat
 
 **Provider Selection:**
+
 - If `gemini_api_key` is empty → uses Ollama (local)
 - If `gemini_api_key` is set → uses Gemini (cloud)
 
-## Troubleshooting
+## Requirements
 
-### Ollama Issues
-
-| Error | Solution |
-|-------|----------|
-| Connection refused | Start Ollama: `ollama serve` |
-| Model not found | Pull model: `ollama pull deepseek-r1:1.5b` |
-| Model not responding | Check Ollama is running and model is loaded |
-
-### Gemini Fallback
-
-If Ollama fails, you can switch to Gemini by setting `gemini_api_key` in config.
+- Minecraft 26.1.1
+- Fabric Loader 0.18.6+
+- Fabric API 0.145.3+
+- Java 25 (to build from source)
+- **Ollama** (optional, for local AI)
 
 ## Building from Source
 
@@ -134,17 +125,8 @@ Jar output: `build/libs/modid-1.0.0.jar`
 
 Config file location: `.minecraft/config/modid.json`
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `gemini_api_key` | Google AI API key | (empty) |
+| Setting           | Description       | Default                |
+| ----------------- | ----------------- | ---------------------- |
+| `gemini_api_key`  | Google AI API key | (empty)                |
 | `ollama.endpoint` | Ollama server URL | http://localhost:11434 |
-| `ollama.model` | Ollama model name | deepseek-r1:1.5b |
-
-## Logs
-
-The mod logs to the standard Minecraft log file. Look for:
-- `Hello Fabric world!` - Mod loaded
-- `Using Ollama: ...` or `Using Gemini API` - Provider info
-- `AI response: ...` - AI response
-- `Executing command: ...` - Command being run
-- Error messages for troubleshooting
+| `ollama.model`    | Ollama model name | deepseek-r1:1.5b       |
