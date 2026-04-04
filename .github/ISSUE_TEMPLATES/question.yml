@@ -1,0 +1,33 @@
+name: "❓ Question"
+description: Ask a question about the project
+labels: [question]
+title: "[QUESTION]:"
+
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: What would you like to know?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: |
+        Provide any relevant context for your question:
+        - What are you trying to accomplish?
+        - What have you already tried?
+        - What version of Minecraft/mod are you using?
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: search
+    attributes:
+      label: Search
+      options:
+        - label: I have searched existing issues and discussions before asking
+          required: true

@@ -1,0 +1,74 @@
+name: "🐛 Bug Report"
+description: Report a bug or unexpected behavior
+labels: [bug]
+title: "[BUG]:"
+
+body:
+  - type: checkboxes
+    id: version
+    attributes:
+      label: Minecraft and mod version
+      options:
+        - label: I am using Minecraft 1.26.1+ with Fabric
+          required: true
+
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Which AI provider are you using?
+      options:
+        - "Gemini API"
+        - "Ollama"
+        - "I don't know"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug description
+      description: Describe the bug clearly and concisely. What happened vs what you expected?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: |
+        How can we reproduce the issue?
+        1. Go to '...'
+        2. Run command '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: |
+        What is your config/modid.json content? (You can remove your API key)
+        ```json
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: |
+        Paste any relevant error messages or log output from the console.
+        ```
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Any other information about the problem (Minecraft mods installed, game mode, etc.)
+    validations:
+      required: false
