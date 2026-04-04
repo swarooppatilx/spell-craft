@@ -29,16 +29,13 @@ public class GeminiApiClient implements ApiClient {
 
     @Override
     public String translateToCommand(String userInput, WorldState worldState) throws Exception {
-        String template = WorldState.getPromptTemplate();
-        String prompt = template + userInput + "\n\nOutput:";
-
         JsonObject requestBody = new JsonObject();
         JsonArray contents = new JsonArray();
         
         JsonObject content = new JsonObject();
         JsonArray parts = new JsonArray();
         JsonObject part = new JsonObject();
-        part.addProperty("text", prompt);
+        part.addProperty("text", userInput);
         parts.add(part);
         content.add("parts", parts);
         contents.add(content);
