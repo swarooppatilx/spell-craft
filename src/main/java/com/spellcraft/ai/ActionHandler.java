@@ -17,12 +17,15 @@ public class ActionHandler {
     private final CommandExecutor executor;
     private final GoalManager goalManager;
     private final LocationMemory locationMemory;
+    private final StructureMemory structureMemory;
+    private final StringBuilder summary = new StringBuilder();
 
-    public ActionHandler(ServerPlayer player, GoalManager goalManager, LocationMemory locationMemory) {
+    public ActionHandler(ServerPlayer player, GoalManager goalManager, LocationMemory locationMemory, StructureMemory structureMemory) {
         this.player = player;
         this.executor = new CommandExecutor();
         this.goalManager = goalManager;
         this.locationMemory = locationMemory;
+        this.structureMemory = structureMemory;
     }
 
     public record ActionResult(String message, boolean success) {}
@@ -45,6 +48,14 @@ public class ActionHandler {
                 for (var actionElem : actions) {
                     JsonObject action = actionElem.getAsJsonObject();
                     String actionType = action.get("action").getAsString();
+                    
+                    if (actionType.equals("clarify")) {
+                        String question = action.getAsJsonObject("params").get("question").getAsString();
+                        player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§e[Clarification] " + question));
+                        results.add(new ActionResult("§e" + question, true));
+                        return results;
+                    }
+                    
                     JsonObject params = action.getAsJsonObject("params");
                     
                     ActionResult result = executeAction(actionType, params);
@@ -68,6 +79,13 @@ public class ActionHandler {
         return response.substring(start, end + 1);
     }
 
+    public String getSummary() {
+        if (summary.length() == 0) {
+            return "No actions executed";
+        }
+        return summary.toString().trim();
+    }
+
     private ActionResult executeAction(String actionType, JsonObject params) {
         try {
             return switch (actionType) {
@@ -81,6 +99,7 @@ public class ActionHandler {
                     int amount = params.has("amount") ? params.get("amount").getAsInt() : 1;
                     String command = "give @p " + itemId + " " + amount;
                     var result = executor.execute(command, player);
+                    summary.append("Gave ").append(amount).append("x ").append(itemId).append(". ");
                     yield new ActionResult(result.output(), result.success());
                 }
                 case "spawn" -> {
@@ -100,6 +119,7 @@ public class ActionHandler {
                             anyFailed = true;
                         }
                     }
+                    summary.append("Spawned ").append(spawned).append("x ").append(entityId).append(". ");
                     if (amount == 1) {
                         yield new ActionResult("Spawned " + entityId, !anyFailed);
                     } else {
@@ -112,6 +132,7 @@ public class ActionHandler {
                     int amplifier = params.has("amplifier") ? params.get("amplifier").getAsInt() : 0;
                     String command = "effect give @p " + effectId + " " + duration + " " + amplifier;
                     var result = executor.execute(command, player);
+                    summary.append("Applied ").append(effectId).append(" (").append(duration).append("s, amp ").append(amplifier).append("). ");
                     yield new ActionResult(result.output(), result.success());
                 }
                 case "set_world" -> {
@@ -146,6 +167,7 @@ public class ActionHandler {
                         default -> command = property + " " + value;
                     }
                     var result = executor.execute(command, player);
+                    summary.append("Changed ").append(property).append(" to ").append(value).append(". ");
                     yield new ActionResult(result.output(), result.success());
                 }
                 case "setblock" -> {
@@ -155,6 +177,7 @@ public class ActionHandler {
                     int z = params.has("z") ? params.get("z").getAsInt() : 3;
                     String command = "setblock ~" + x + " ~" + y + " ~" + z + " " + block;
                     var result = executor.execute(command, player);
+                    summary.append("Placed ").append(block).append(" at offset (").append(x).append(",").append(y).append(",").append(z).append("). ");
                     yield new ActionResult(result.output(), result.success());
                 }
                 case "fill" -> {
@@ -167,6 +190,10 @@ public class ActionHandler {
                     int z2 = params.has("z2") ? params.get("z2").getAsInt() : 5;
                     String command = "fill ~" + x1 + " ~" + y1 + " ~" + z1 + " ~" + x2 + " ~" + y2 + " ~" + z2 + " " + block;
                     var result = executor.execute(command, player);
+                    int w = Math.abs(x2 - x1) + 1;
+                    int h = Math.abs(y2 - y1) + 1;
+                    int d = Math.abs(z2 - z1) + 1;
+                    summary.append("Filled ").append(w).append("x").append(h).append("x").append(d).append(" region of ").append(block).append(". ");
                     yield new ActionResult(result.output(), result.success());
                 }
                 case "cast_spell" -> {
@@ -203,6 +230,26 @@ public class ActionHandler {
                     } else {
                         yield new ActionResult("§cUnknown location: " + location, false);
                     }
+                }
+                case "remember_structure" -> {
+                    String name = params.get("name").getAsString();
+                    String material = params.has("material") ? params.get("material").getAsString() : "unknown";
+                    String description = params.has("description") ? params.get("description").getAsString() : "";
+                    int px = player.getBlockX();
+                    int py = player.getBlockY();
+                    int pz = player.getBlockZ();
+                    int width = params.has("width") ? params.get("width").getAsInt() : 0;
+                    int height = params.has("height") ? params.get("height").getAsInt() : 0;
+                    int depth = params.has("depth") ? params.get("depth").getAsInt() : 0;
+                    structureMemory.addStructure(name, material, description, px, py, pz, width, height, depth);
+                    yield new ActionResult("Structure remembered: " + name, true);
+                }
+                case "update_structure" -> {
+                    String name = params.get("name").getAsString();
+                    String material = params.has("material") ? params.get("material").getAsString() : null;
+                    String description = params.has("description") ? params.get("description").getAsString() : null;
+                    structureMemory.updateStructure(name, material, description);
+                    yield new ActionResult("Structure updated: " + name, true);
                 }
                 default -> new ActionResult("§cUnknown action: " + actionType, false);
             };

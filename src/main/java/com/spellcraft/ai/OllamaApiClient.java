@@ -29,12 +29,9 @@ public class OllamaApiClient implements ApiClient {
 
     @Override
     public String translateToCommand(String userInput, WorldState worldState) throws Exception {
-        String template = WorldState.getPromptTemplate();
-        String prompt = template + userInput + "\n\nOutput:";
-
         JsonObject requestBody = new JsonObject();
         requestBody.addProperty("model", model);
-        requestBody.addProperty("prompt", prompt);
+        requestBody.addProperty("prompt", userInput);
         requestBody.addProperty("stream", false);
 
         String url = apiUrl + "/api/generate";

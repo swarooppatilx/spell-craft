@@ -2,12 +2,14 @@ package com.spellcraft;
 
 import com.spellcraft.ai.ApiClient;
 import com.spellcraft.ai.ActionHandler;
+import com.spellcraft.ai.ChatHistory;
 import com.spellcraft.ai.Config;
 import com.spellcraft.ai.GeminiApiClient;
 import com.spellcraft.ai.GoalManager;
 import com.spellcraft.ai.LocationMemory;
 import com.spellcraft.ai.OllamaApiClient;
 import com.spellcraft.ai.ReflexHandler;
+import com.spellcraft.ai.StructureMemory;
 import com.spellcraft.ai.WorldState;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.api.ModInitializer;
@@ -31,12 +33,16 @@ public class SpellCraftMod implements ModInitializer {
         ReflexHandler reflexHandler;
         GoalManager goalManager;
         LocationMemory locationMemory;
+        StructureMemory structureMemory;
+        ChatHistory chatHistory;
         boolean aiRunning = false;
 
         PlayerContext(ServerPlayer player) {
             this.reflexHandler = new ReflexHandler(player);
             this.goalManager = new GoalManager(player);
             this.locationMemory = new LocationMemory(player);
+            this.structureMemory = new StructureMemory();
+            this.chatHistory = new ChatHistory();
         }
     }
 
@@ -136,14 +142,18 @@ public class SpellCraftMod implements ModInitializer {
 
         WorldState worldState = new WorldState(player);
         ApiClient apiClient = createApiClient();
+        String chatHistoryPrompt = ctx.chatHistory.getHistoryPrompt();
+        String structurePrompt = ctx.structureMemory.getStructuresPrompt();
 
         CompletableFuture.runAsync(() -> {
             try {
                 ctx.aiRunning = true;
-                String prompt = WorldState.getPromptTemplate() + goalPrompt + "\nQUERY: What is the next action?\nOutput:";
+                String prompt = WorldState.getPromptTemplate() + goalPrompt + structurePrompt + chatHistoryPrompt + "\nQUERY: What is the next action?\nOutput:";
                 String response = apiClient.translateToCommand(prompt, worldState);
 
-                ActionHandler handler = new ActionHandler(player, ctx.goalManager, ctx.locationMemory);
+                ctx.chatHistory.addMessage("assistant", response);
+
+                ActionHandler handler = new ActionHandler(player, ctx.goalManager, ctx.locationMemory, ctx.structureMemory);
                 handler.executeActions(response);
             } catch (Exception e) {
                 player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§cError: " + e.getMessage()));
@@ -204,12 +214,15 @@ public class SpellCraftMod implements ModInitializer {
         WorldState worldState = new WorldState(player);
         GoalManager goalManager = ctx.goalManager;
         LocationMemory locationMemory = ctx.locationMemory;
-        ActionHandler actionHandler = new ActionHandler(player, goalManager, locationMemory);
+        StructureMemory structureMemory = ctx.structureMemory;
+        ActionHandler actionHandler = new ActionHandler(player, goalManager, locationMemory, structureMemory);
         ApiClient apiClient = createApiClient();
 
         String goalPrompt = goalManager.getGoalPrompt();
         String locationPrompt = locationMemory.getLocationsPrompt();
-        String fullPrompt = WorldState.getPromptTemplate() + goalPrompt + locationPrompt + query + "\n\nOutput:";
+        String structurePrompt = structureMemory.getStructuresPrompt();
+        String chatHistoryPrompt = ctx.chatHistory.getHistoryPrompt();
+        String fullPrompt = WorldState.getPromptTemplate() + goalPrompt + locationPrompt + structurePrompt + chatHistoryPrompt + query + "\n\nOutput:";
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -218,6 +231,9 @@ public class SpellCraftMod implements ModInitializer {
                 LOGGER.info("AI response: " + response);
 
                 var results = actionHandler.executeActions(response);
+                String summary = actionHandler.getSummary();
+
+                ctx.chatHistory.addExchange(query, summary);
 
                 if (results.isEmpty()) {
                     player.sendSystemMessage(net.minecraft.network.chat.Component.literal(

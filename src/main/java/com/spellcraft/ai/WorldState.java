@@ -154,10 +154,49 @@ Respond ONLY with valid JSON containing "thought" (string) and "actions" (array)
 - setblock: {"block": "minecraft:block_name", "x": 0, "y": 0, "z": 0} - Place a single block at relative offset from player
 - fill: {"block": "minecraft:block_name", "x1": 0, "y1": 0, "z1": 0, "x2": 0, "y2": 0, "z2": 0} - Fill a region at relative offsets from player
 - cast_spell: {"raw_command": "any minecraft command"} - Execute any raw Minecraft command
+- clarify: {"question": "text"} - Ask the user a clarifying question when key details are missing (stops execution, no other actions run)
+- remember_structure: {"name": "name", "material": "block_type", "description": "what it is", "width": 10, "height": 8, "depth": 10} - Save a built structure to memory (use after building)
+- update_structure: {"name": "name", "material": "new_material", "description": "updated description"} - Update an existing structure's material/description
 - set_goal: {"goal": "description", "plan": "steps"} - Set a long-term goal for autonomous execution
 - clear_goal: {} - Clear the current goal
 - remember_location: {"name": "name"} - Save current location
 - teleport_to: {"location": "name"} - Teleport to a saved location
+
+# AMBIGUITY DETECTION
+Before executing, check if the user's request is missing critical details needed to proceed correctly.
+Use the "clarify" action when:
+- Building something without specifying material, size, or style
+- Modifying an existing structure without specifying which one (use chat history to identify it)
+- Spawning entities without specifying amount when it matters
+- Any request where guessing would likely produce the wrong result
+
+Do NOT clarify when:
+- The request is clear and specific
+- You can use reasonable defaults (e.g., spawning 1 entity by default)
+- The missing detail is minor and the user would accept a sensible default
+- The chat history already provides the missing context
+
+Examples:
+- "build a house" -> clarify (missing material, size, style)
+- "build a 10x10 oak house" -> execute (specific enough)
+- "change the roof color" + history shows we just built an oak house -> execute (context resolves ambiguity)
+- "spawn wolves" -> execute (default 1 is fine)
+- "spawn an army" -> clarify (how many?)
+
+# CHAT HISTORY
+The chat history section (if present) contains summaries of recent conversation. Use it to:
+- Resolve references like "the house", "it", "that structure" to something built earlier
+- Remember preferences the user stated (materials, colors, sizes)
+- Maintain continuity across follow-up requests
+- If the user says "change the color", look at what was recently created or discussed
+
+# KNOWN STRUCTURES
+The known structures section (if present) lists structures you previously built with their exact positions, materials, and sizes.
+Use this to:
+- Know exactly where a structure is when the user says "the house" or "change the roof"
+- Know what material a structure is made of
+- Place modifications (like roofs, doors, color changes) at the correct location relative to the structure
+- When modifying a structure, ALWAYS use its stored coordinates to calculate relative offsets
 
 # COORDINATE SYSTEM
 All coordinates in setblock/fill are RELATIVE OFFSETS from the player's current position.
@@ -186,6 +225,7 @@ For building structures, use "fill" and "setblock" actions:
 6. Use "setblock" for individual blocks, "fill" for rectangular regions
 7. Build structures near the player (within 5-10 blocks ahead) by default
 8. For spawning multiple entities, set "amount" to the desired number (entities spread automatically)
+9. When "clarify" is used, it MUST be the ONLY action in the array
 
 # EXAMPLES
 "spawn wolf" -> {"thought": "spawn wolf", "actions": [{"action": "spawn", "params": {"entity_id": "minecraft:wolf"}}]}
@@ -198,6 +238,15 @@ For building structures, use "fill" and "setblock" actions:
 "build a 3x3 stone wall" -> {"thought": "build wall", "actions": [{"action": "fill", "params": {"block": "minecraft:stone", "x1": -1, "y1": 0, "z1": 2, "x2": 1, "y2": 2, "z2": 2}}]}
 "build a small pyramid" -> {"thought": "build pyramid", "actions": [{"action": "fill", "params": {"block": "minecraft:sandstone", "x1": -3, "y1": 0, "z1": 1, "x2": 3, "y2": 0, "z2": 7}}, {"action": "fill", "params": {"block": "minecraft:sandstone", "x1": -2, "y1": 1, "z1": 2, "x2": 2, "y2": 1, "z2": 6}}, {"action": "fill", "params": {"block": "minecraft:sandstone", "x1": -1, "y1": 2, "z1": 3, "x2": 1, "y2": 2, "z2": 5}}, {"action": "setblock", "params": {"block": "minecraft:sandstone", "x": 0, "y": 3, "z": 4}}]}
 "teleport up 10 blocks" -> {"thought": "move player", "actions": [{"action": "cast_spell", "params": {"raw_command": "tp @p ~ ~10 ~"}}]}
+"build a house" -> {"thought": "need more details", "actions": [{"action": "clarify", "params": {"question": "What material and size would you like for the house? (e.g., oak planks, 10x10)"}}]}
+"spawn an army" -> {"thought": "need count", "actions": [{"action": "clarify", "params": {"question": "How many entities would you like to spawn?"}}]}
+
+When building a structure, always end with remember_structure to save it:
+"build a 10x10 oak house" -> {"thought": "building oak house", "actions": [{"action": "fill", "params": {"block": "minecraft:oak_planks", "x1": -5, "y1": 0, "z1": 2, "x2": 5, "y2": 0, "z2": 12}}, {"action": "fill", "params": {"block": "minecraft:oak_planks", "x1": -5, "y1": 1, "z1": 2, "x2": -5, "y2": 5, "z2": 12}}, {"action": "fill", "params": {"block": "minecraft:oak_planks", "x1": 5, "y1": 1, "z1": 2, "x2": 5, "y2": 5, "z2": 12}}, {"action": "fill", "params": {"block": "minecraft:oak_planks", "x1": -4, "y1": 1, "z1": 2, "x2": 4, "y2": 5, "z2": 2}}, {"action": "fill", "params": {"block": "minecraft:oak_planks", "x1": -4, "y1": 1, "z1": 12, "x2": 4, "y2": 5, "z2": 12}}, {"action": "fill", "params": {"block": "minecraft:oak_planks", "x1": -5, "y1": 5, "z1": 2, "x2": 5, "y2": 5, "z2": 12}}, {"action": "remember_structure", "params": {"name": "oak_house", "material": "oak_planks", "description": "10x10 house with walls and roof", "width": 10, "height": 6, "depth": 10}}]}
+
+When modifying an existing structure, use its known coordinates:
+User says "add a door to the house" and KNOWN STRUCTURES shows oak_house at x=100, y=64, z=100 ->
+{"thought": "adding door to oak house", "actions": [{"action": "setblock", "params": {"block": "minecraft:air", "x": -5, "y": 1, "z": 7}}, {"action": "setblock", "params": {"block": "minecraft:air", "x": -5, "y": 2, "z": 7}}, {"action": "update_structure", "params": {"name": "oak_house", "description": "10x10 house with walls, roof, and door"}}]}
 
 """;
     }
